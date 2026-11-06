@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Panel del agente</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+const API = "https://agente-telegram-umda.onrender.com";
+let _sesion = localStorage.getItem("sesion") || "";
+const _canje = (async () => {
+  const m = location.hash.match(/t=([^&]+)/); if (!m) return;
+  history.replaceState(null, "", location.pathname);
+  try {
+    const r = await fetch(API + "/api/canjear", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({t: decodeURIComponent(m[1])})});
+    const d = await r.json(); if (d.token) { _sesion = d.token; localStorage.setItem("sesion", _sesion); } else alert(d.error || "Enlace inválido");
+  } catch (e) { alert("No pude conectar con el bot (puede estar despertando). Pide otro /web en un minuto."); }
+})();
+const _fetch = window.fetch.bind(window);
+window.fetch = async (u, o = {}) => {
+  if (typeof u === "string" && u.startsWith("/")) { await _canje; u = API + u; o = {...o, headers: {...(o.headers || {}), Authorization: "Bearer " + _sesion}}; }
+  return _fetch(u, o);
+};
+function salirWeb() { localStorage.removeItem("sesion"); location.reload(); }
+</script>
+
+<style>
+:root{--r:16px;--gap:12px;--acc:#5b8cff;--acc-fg:#fff;
+--bg:#0b0d12;--card:#151922;--card2:#1d222d;--line:rgba(255,255,255,.07);--fg:#e9edf3;--sub:#8b93a3;
+--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--ok-bg:rgba(52,211,153,.14);--warn-bg:rgba(251,191,36,.14);--bad-bg:rgba(248,113,113,.15);--acc-bg:rgba(91,140,255,.16);
+--press:rgba(255,255,255,.06);--shadow:0 1px 0 rgba(255,255,255,.03) inset}
+html[data-theme=light]{--bg:#f2f4f8;--card:#fff;--card2:#f1f3f7;--line:rgba(15,23,42,.08);--fg:#0f172a;--sub:#64748b;
+--ok:#059669;--warn:#b45309;--bad:#dc2626;--ok-bg:rgba(5,150,105,.1);--warn-bg:rgba(217,119,6,.12);--bad-bg:rgba(220,38,38,.1);--acc-bg:rgba(37,99,235,.1);
+--press:rgba(15,23,42,.05);--shadow:0 1px 2px rgba(15,23,42,.05)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+ -webkit-font-smoothing:antialiased;padding:0 0 calc(84px + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+svg.i.s{width:16px;height:16px}
+/* Encabezado */
+header{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
+ display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid transparent;transition:border-color .2s}
+header.borde{border-color:var(--line)}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:16px;background:var(--card);font-size:13px;font-weight:600;box-shadow:var(--shadow);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--sub);flex:none}
+.dot.ok{background:var(--ok);box-shadow:0 0 0 3px var(--ok-bg)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+main{padding:4px calc(16px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left))}
+section{display:none}section.on{display:block;animation:ent .18s ease-out}
+@keyframes ent{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* Tarjetas */
+.card{background:var(--card);border-radius:var(--r);padding:14px 16px;margin:0 0 var(--gap);box-shadow:var(--shadow)}
+.ct{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font-size:13px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+.ct .i{color:var(--sub)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sub{color:var(--sub);font-size:13px}.xs{font-size:12px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap)}
+.grid .card{margin:0}
+.kpi .lab{font-size:12px;color:var(--sub);font-weight:600;display:flex;align-items:center;gap:6px}
+.kpi .val{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .val small{font-size:15px;font-weight:600;color:var(--sub);margin-left:3px}
+.kpi .det{font-size:12px;color:var(--sub);margin-top:4px;min-height:16px}
+.bar{height:6px;border-radius:3px;background:var(--card2);overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;width:0;background:var(--acc);border-radius:3px;transition:width .5s ease}
+.bar.ok>i{background:var(--ok)}.bar.warn>i{background:var(--warn)}.bar.bad>i{background:var(--bad)}
+.res{padding:10px 0;border-bottom:1px solid var(--line)}.res:first-of-type{padding-top:0}.res:last-child{border:0;padding-bottom:0}
+.res .val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+canvas{width:100%;height:40px;display:block;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:12px;font-size:12px;font-weight:600;background:var(--card2);color:var(--sub);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.acc{background:var(--acc-bg);color:var(--acc)}
+.lista>.it{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 0;border-bottom:1px solid var(--line)}
+.lista>.it:last-child{border:0}.lista>.it>.tx{min-width:0;flex:1;overflow-wrap:anywhere}
+.vacio{color:var(--sub);text-align:center;padding:22px 8px;font-size:14px}
+/* Elementos táctiles */
+.tap{transition:background .12s,transform .12s,opacity .12s}
+.tap:active,button:active{transform:scale(.97);opacity:.85}
+.ib{min-width:44px;min-height:44px;border:0;border-radius:12px;background:var(--card2);display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;font-size:14px;font-weight:600;flex:none}
+.ib:active{background:var(--press)}
+.ib.peligro{color:var(--bad);background:var(--bad-bg)}
+.ib.pri{background:var(--acc);color:var(--acc-fg)}
+.ib.on{background:var(--acc);color:var(--acc-fg)}
+/* IA */
+.ia-row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 0;border-bottom:1px solid var(--line)}
+.ia-row:last-child{border:0}.ia-row .tx{flex:1;min-width:0}.ia-row b{font-weight:600}
+.ms{font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;text-align:right;white-space:nowrap}
+.ms.ok{color:var(--ok)}.ms.bad{color:var(--bad)}.ms small{display:block;font-size:11px;font-weight:500;color:var(--sub)}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Barras horizontales de uso */
+.hb{display:grid;grid-template-columns:minmax(0,1fr) 40px;align-items:center;gap:4px 10px;margin:8px 0}
+.hb .n{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb .c{font-size:13px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.hb .bar{grid-column:1/-1;margin-top:0}
+.cols{display:flex;align-items:flex-end;gap:6px;height:84px;margin-top:6px}
+.cols>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.cols i{display:block;width:100%;max-width:30px;border-radius:6px 6px 3px 3px;background:var(--acc-bg);min-height:3px}
+.cols>div.hoy i{background:var(--acc)}
+.cols span{font-size:10px;color:var(--sub);font-variant-numeric:tabular-nums}
+/* Trabajos */
+.job{padding:0;overflow:hidden}
+.job .cab{display:block;width:100%;text-align:left;border:0;background:transparent;padding:14px 16px;min-height:44px}
+.job .cab:active{background:var(--press);transform:none;opacity:1}
+.job .tit{font-weight:600;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.job .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.job .eta{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+.job .ahora{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card2);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;display:flex;gap:8px}
+.job .ahora .i{color:var(--acc);margin-top:1px}
+.job .cuerpo{padding:0 16px 14px;border-top:1px solid var(--line)}
+.job .pie{display:flex;gap:10px;padding:0 16px 14px}
+.job .pie .ib{flex:1}
+.chev{transition:transform .2s;color:var(--sub)}.abierto .chev{transform:rotate(90deg)}
+.tl{list-style:none;margin:12px 0 0;padding:0}
+.tl li{display:flex;gap:10px;align-items:flex-start;padding:5px 0;font-size:14px;overflow-wrap:anywhere}
+.tl .i{margin-top:1px}.tl .ok{color:var(--ok)}.tl .warn{color:var(--warn)}.tl .run{color:var(--acc)}
+.sec{margin-top:14px;font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between}
+.proc{margin-top:8px;max-height:300px;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:var(--card2);padding:8px 10px;font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+.proc div{display:flex;gap:10px;padding:2px 0;overflow-wrap:anywhere}.proc .t{color:var(--sub);flex:none;min-width:36px}
+.proc .ok{color:var(--ok)}.proc .warn{color:var(--warn)}
+.msj{background:var(--card2);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;border-left:3px solid transparent}
+.msj .q{font-size:12px;font-weight:700}.msj .q span{color:var(--sub);font-weight:500;margin-left:6px}
+.msj.critico{border-left-color:var(--warn)}.msj.creativo{border-left-color:var(--acc)}.msj.escribiendo{opacity:.65}
+.prev{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:0;background:transparent;padding:10px 0;min-height:52px;border-bottom:1px solid var(--line)}
+.prev:last-child{border:0}
+/* Detalles plegables */
+details{background:var(--card);border-radius:var(--r);margin:0 0 var(--gap);box-shadow:var(--shadow);overflow:hidden}
+details>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:0 16px;font-weight:600;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+summary .sub,summary .chip{font-weight:500}
+details>summary:active{background:var(--press)}
+details>summary .chev{transform:rotate(0)}details[open]>summary .chev{transform:rotate(90deg)}
+details>.dc{padding:0 16px 14px}
+details.in{background:transparent;box-shadow:none;margin:10px 0 0;border-radius:0}
+details.in>summary{padding:0;min-height:44px;font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+details.in>.dc{padding:0}
+pre{white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;margin:0}
+/* Control */
+.acciones{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap)}
+.acciones button{border:0;border-radius:var(--r);padding:14px;min-height:112px;background:var(--card);text-align:left;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
+.acciones button:active{background:var(--press)}
+.acciones .ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--acc-bg);color:var(--acc)}
+.acciones b{font-size:15px;font-weight:600}.acciones small{color:var(--sub);font-size:12px;line-height:1.3}
+.acciones button.peligro .ico{background:var(--bad-bg);color:var(--bad)}.acciones button.peligro b{color:var(--bad)}
+.acciones button.on .ico{background:var(--acc);color:var(--acc-fg)}
+/* Consola */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;min-height:44px;min-width:44px;border:0;border-radius:22px;padding:0 16px;background:var(--card);font-size:14px;font-weight:600;box-shadow:var(--shadow)}
+.chips button.on{background:var(--acc);color:var(--acc-fg)}
+.filtro{display:flex;gap:8px;margin-bottom:10px}
+.filtro input{flex:1;min-width:0;min-height:44px;border:0;border-radius:12px;padding:0 14px;background:var(--card);font-size:16px;box-shadow:var(--shadow);outline:none}
+.filtro input:focus{box-shadow:0 0 0 2px var(--acc)}
+.term{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;white-space:pre-wrap;word-break:break-word;background:#07090d;color:#c9d1dc;border-radius:var(--r);padding:12px;
+ height:calc(100vh - 280px - env(safe-area-inset-bottom) - env(safe-area-inset-top));min-height:260px;overflow:auto;-webkit-overflow-scrolling:touch}
+.term>div{padding:1px 0}
+.term .WARNING,.term .WARN{color:#fbbf24}.term .ERROR,.term .CRITICAL,.term .ERR{color:#f87171}.term .OUT{color:#93c5fd}.term .sub{color:#7c8594}
+.dep{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-family:-apple-system,system-ui,sans-serif;font-size:13px}
+.oculto{display:none!important}
+/* Archivos */
+.fi{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;min-height:52px;padding:8px 0;border-bottom:1px solid var(--line)}
+.fi:last-child{border:0}.fi:active{background:var(--press);transform:none}
+.fi .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--card2);color:var(--sub);flex:none}
+.fi .ic.d{background:var(--acc-bg);color:var(--acc)}
+.fi .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.fi .met{flex:none;color:var(--sub);font-size:11px;text-align:right;font-family:ui-monospace,Menlo,monospace}
+#fvcuerpo pre{max-height:60vh;overflow:auto;background:#07090d;color:#c9d1dc;border-radius:12px;padding:10px}
+#fvcuerpo img,#pimg img{max-width:100%;width:100%;border-radius:12px;display:block}
+/* Navegación inferior */
+#cerrar{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));z-index:35;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.25);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#cerrar:active{background:var(--press);transform:scale(.94)}
+#cerrar svg{width:22px;height:22px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-around;background:var(--card);border-top:1px solid var(--line);
+ padding:6px calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));backdrop-filter:saturate(1.4) blur(12px);-webkit-backdrop-filter:saturate(1.4) blur(12px)}
+.tabbar button{flex:1;min-height:52px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--sub);border-radius:12px;position:relative}
+.tabbar button .i{width:24px;height:24px}
+.tabbar button.on{color:var(--acc)}
+.tabbar button:active{background:var(--press);transform:none}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:var(--acc-fg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+/* Hoja "Más" */
+.velo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.velo.on{opacity:1;pointer-events:auto}
+.hoja{visibility:hidden;position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--card);border-radius:20px 20px 0 0;padding:8px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility .25s}
+.hoja.on{transform:none;visibility:visible}
+.hoja .asa{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 12px}
+.hoja button{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;border:0;background:transparent;border-radius:12px;padding:0 8px;font-size:16px;font-weight:600;text-align:left}
+.hoja button:active{background:var(--press);transform:none}
+.hoja button .ic{width:40px;height:40px;border-radius:12px;background:var(--acc-bg);color:var(--acc);display:flex;align-items:center;justify-content:center}
+.hoja button small{display:block;font-size:12px;color:var(--sub);font-weight:500}
+/* Aviso y deslizar para refrescar */
+#toast{position:fixed;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));background:#1f2430;color:#fff;border-radius:14px;padding:14px 16px;font-size:14px;z-index:50;display:flex;gap:10px;align-items:flex-start;box-shadow:0 8px 30px rgba(0,0,0,.3);transform:translateY(20px);opacity:0;pointer-events:none;transition:all .2s}
+#toast.on{transform:none;opacity:1}
+#toast .i{flex:none;margin-top:1px}#toast.ok .i{color:#34d399}#toast.mal .i{color:#fbbf24}
+#ptr{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;z-index:25;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:var(--card);box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:var(--acc);opacity:0;transform:translateY(-50px);pointer-events:none}
+#ptr.gira .i{animation:gira .7s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.spin{animation:gira 1.2s linear infinite}
+</style>
+</head>
+<body>
+<div id="ptr"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></div>
+<header id="cab">
+ <h1 id="titulo">Resumen</h1>
+ <span class="pill" id="estadoPill"><i class="dot" id="pt"></i><span id="linea">Conectando</span></span>
+</header>
+
+<main>
+<!-- RESUMEN -->
+<section id="resumen" class="on">
+ <div class="card">
+  <div class="row"><div><div style="font-weight:700;font-size:17px" id="hero">Conectando…</div><div class="sub" id="up">–</div></div><span class="chip" id="ver">ver. –</span></div>
+  <div class="row" style="margin-top:10px;flex-wrap:wrap;justify-content:flex-start;gap:6px" id="heroChips"></div>
+ </div>
+ <div class="card oculto" id="panelesBox"><div class="ct"><span>Mis paneles</span><span data-ic="spark"></span></div><div id="paneles" class="lista"></div></div>
+ <div class="grid">
+  <div class="card kpi tap" onclick="ir('trabajos')"><div class="lab" data-ic="layers">Trabajos activos</div><div class="val" id="ntr">–</div><div class="det" id="cola"></div></div>
+  <div class="card kpi"><div class="lab" data-ic="bolt">Respuesta media</div><div class="val" id="vel">–</div><div class="det" id="velsub"></div></div>
+  <div class="card kpi"><div class="lab" data-ic="tool">Herramientas hoy</div><div class="val" id="usoHoy">–</div><div class="det" id="usoTop"></div></div>
+  <div class="card kpi tap" onclick="ir('consola')"><div class="lab" data-ic="warn">Errores en el log</div><div class="val" id="err">–</div><div class="det" id="wh"></div></div>
+ </div>
+ <div class="card" id="enCursoCard"><div class="ct"><span>En curso</span><span data-ic="chev"></span></div><div id="enCurso"></div></div>
+ <div class="card">
+  <div class="ct"><span>Servidor</span><span data-ic="cpu"></span></div>
+  <div class="res"><div class="row"><span class="sub">Memoria RAM</span><span class="val" id="ram">–</span></div><div class="bar" id="rambw"><i id="ramb"></i></div><canvas id="gram"></canvas></div>
+  <div class="res"><div class="row"><span class="sub">CPU</span><span class="val" id="cpu">–</span></div><div class="bar" id="cpubw"><i id="cpub"></i></div><canvas id="gcpu"></canvas></div>
+  <div class="res"><div class="row"><span class="sub">Disco libre</span><span class="val" id="disco">–</span></div><div class="bar" id="discobw"><i id="discob"></i></div><div class="sub xs" id="discosub" style="margin-top:6px"></div></div>
+ </div>
+ <div class="card"><div class="ct"><span>Inteligencias</span><span class="chip" id="iaResumen">–</span></div><div id="ias">–</div>
+  <div id="pausasBox" class="oculto"><div class="sec"><span>En pausa</span><span id="npausas"></span></div><div id="pausas" class="lista"></div></div></div>
+ <div class="card"><div class="ct"><span>Uso de herramientas</span><span class="sub xs" style="text-transform:none;letter-spacing:0">hoy · 7 días</span></div><div id="usoBarras"></div><div class="cols" id="usoDias"></div></div>
+ <div class="card"><div class="ct"><span>Últimas respuestas</span><span data-ic="chat"></span></div><div id="ult">–</div></div>
+ <div class="grid">
+  <div class="card kpi"><div class="lab" data-ic="globe">Navegador</div><div class="val" style="font-size:20px" id="navv">–</div><div class="det" id="nav"></div></div>
+  <div class="card kpi tap" onclick="ir('mente')"><div class="lab" data-ic="bulb">Memoria del bot</div><div class="val" style="font-size:20px" id="mres">–</div><div class="det" id="mresd"></div></div>
+ </div>
+ <div class="card"><div class="ct"><span>Tareas programadas</span><span data-ic="clock"></span></div><div id="tareas" class="lista">–</div></div>
+</section>
+
+<!-- TRABAJOS -->
+<section id="trabajos"><div id="lista"></div><div id="recientes"></div><div id="udebate"></div></section>
+
+<!-- CHAT -->
+<section id="chat">
+ <div id="chatLista" class="lista" style="padding-bottom:150px"><div class="card sub">Escríbeme como en Telegram. Lo que pidas queda también allá (imágenes, videos y archivos llegan a Telegram).</div></div>
+ <div style="position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));padding:8px 12px;background:var(--bg, #0b0b0f);display:flex;gap:8px;z-index:5">
+  <textarea id="chatTx" rows="2" placeholder="Escribe aquí…" style="flex:1;resize:none;border-radius:14px;padding:10px;font:inherit;background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.12)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatEnviar()}"></textarea>
+  <button onclick="chatEnviar()" style="border-radius:14px;padding:0 16px;font-weight:700">Enviar</button>
+ </div>
+</section>
+
+<!-- CONTROL -->
+<section id="control">
+ <div class="acciones">
+  <button onclick="accion('ram')"><span class="ico" data-ic="cpu"></span><b>Liberar RAM</b><small>Limpia memoria y cierra el navegador si nadie lo usa</small></button>
+  <button onclick="accion('navegador')"><span class="ico" data-ic="globe"></span><b>Cerrar navegador</b><small>Lo que más RAM ocupa</small></button>
+  <button onclick="accion('disco')"><span class="ico" data-ic="trash"></span><b>Limpiar disco</b><small>Borra videos y archivos temporales viejos</small></button>
+  <button onclick="accion('guardar')"><span class="ico" data-ic="save"></span><b>Guardar memoria</b><small>Respalda ya, sin esperar</small></button>
+  <button onclick="accion('automejorar','', '¿Reviso mis errores y aplico el arreglo si la prueba pasa? Lo ves en Trabajos.')"><span class="ico" data-ic="spark"></span><b>Revisar y mejorarme</b><small>Busco mis errores, los arreglo y lo ves en Trabajos</small></button>
+  <button onclick="accion('ias')"><span class="ico" data-ic="spark"></span><b>Probar las IA</b><small>Mide cuánto tarda cada una</small></button>
+  <button id="btnRapido" onclick="accion('rapido')"><span class="ico" data-ic="bolt"></span><b>Modo rápido</b><small id="rapidoTxt">Groq primero en lo simple</small></button>
+  <button class="peligro" onclick="accion('detener_todo','', '¿Detener todos los trabajos?')"><span class="ico" data-ic="stop"></span><b>Detener todo</b><small>Cancela lo que esté corriendo</small></button>
+  <button class="peligro" onclick="accion('reiniciar','', '¿Reiniciar el bot? Vuelve en 1 a 2 minutos.')"><span class="ico" data-ic="power"></span><b>Reiniciar bot</b><small>Si algo se pegó</small></button>
+ </div>
+ <div class="card"><div class="ct"><span>Tareas programadas</span><span data-ic="clock"></span></div><div id="tareas2" class="lista">–</div></div>
+ <div class="card"><div class="ct"><span>Último resultado</span></div><div id="resacc" class="sub">–</div></div>
+</section>
+
+<!-- MENTE -->
+<section id="mente">
+ <div class="grid">
+  <div class="card kpi"><div class="lab">Recuerdos</div><div class="val" id="mrec">–</div><div class="det">mensajes en la memoria larga</div></div>
+  <div class="card kpi"><div class="lab">Lecciones</div><div class="val" id="mlec">–</div><div class="det">aprendidas de sus errores</div></div>
+  <div class="card kpi"><div class="lab">Notas sobre ti</div><div class="val" id="mnot">–</div><div class="det" id="mcomp"></div></div>
+  <div class="card kpi"><div class="lab">Respaldo</div><div class="val" style="font-size:20px" id="mgua">–</div><div class="det" id="mdon"></div></div>
+ </div>
+ <div class="card"><div class="ct"><span>Últimas lecciones</span><span class="sub xs" style="text-transform:none;letter-spacing:0">toca la X para olvidarla</span></div><div id="mlecs" class="lista">–</div></div>
+ <div class="card"><div class="ct"><span>Aprendido en silencio</span></div><div class="sub" id="maprst"></div><div id="mapr" class="lista">–</div></div>
+ <div class="card"><div class="ct"><span>Planes abiertos</span></div><div id="mplanes" class="lista">–</div></div>
+ <div class="card"><div class="ct"><span>Propuestas por iniciativa propia</span></div><div class="sub" id="mprost"></div><div id="mpro" class="lista">–</div></div>
+</section>
+
+<!-- CONSOLA -->
+<section id="consola-s">
+ <div class="chips" id="fuentes">
+  <button data-f="bot" class="on">Bot en vivo</button><button data-f="app">Render · app</button><button data-f="build">Render · construcción</button>
+  <button data-f="request">Render · visitas</button><button data-f="deploys">Despliegues</button>
+ </div>
+ <div class="filtro"><input id="ftxt" placeholder="Buscar en el log" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="ib" id="ferr" aria-label="Solo errores"><span data-ic="warn"></span></button><button class="ib" id="fcop" aria-label="Copiar"><span data-ic="copy"></span></button></div>
+ <div id="consola" class="term"></div><div id="rlog" class="term oculto"></div>
+</section>
+
+<!-- MEMORIA -->
+<section id="memoria"><div id="mem"><div class="vacio">Cargando…</div></div></section>
+
+<!-- PANTALLA -->
+<section id="pantalla"><div class="card"><div class="row"><span class="sub" id="pinfo">Lo que ve el navegador del bot, cada 3 s.</span><span class="chip acc" id="pvivo">en vivo</span></div></div><div id="pimg"></div></section>
+
+<!-- ARCHIVOS -->
+<section id="archivos">
+ <div class="filtro"><input id="fruta" value="/" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')abrir(this.value)">
+  <button class="ib" onclick="abrir(fdir+'/..')" aria-label="Subir"><span data-ic="up"></span></button><button class="ib" onclick="abrir(fdir)" aria-label="Recargar"><span data-ic="refresh"></span></button></div>
+ <div class="chips"><button onclick="abrir('/')">/</button><button onclick="abrir('/app')">/app · código</button><button onclick="abrir('/tmp/agente')">/tmp/agente · trabajos</button><button onclick="abrir('/root')">/root</button><button onclick="abrir('/proc')">/proc</button></div>
+ <div class="sub" id="finfo" style="margin:0 2px 10px"></div>
+ <div class="card oculto" id="fver"><div class="row"><b id="fvnom" class="trunc"></b><span style="display:flex;gap:8px"><button class="ib pri" onclick="enviarArch()"><span data-ic="send"></span>Telegram</button><button class="ib" aria-label="Cerrar" onclick="$('fver').classList.add('oculto')"><span data-ic="x"></span></button></span></div><div class="sub xs mono" id="fvinfo" style="margin-top:6px;overflow-wrap:anywhere"></div><div id="fvcuerpo" style="margin-top:10px"></div></div>
+ <div class="card" id="flista" style="padding:4px 16px"></div>
+</section>
+</main>
+
+<button id="cerrar" type="button" aria-label="Cerrar panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+<nav class="tabbar" id="tabbar">
+ <button data-t="resumen" class="on"><span data-ic="home"></span>Resumen</button>
+ <button data-t="trabajos"><span data-ic="layers"></span>Trabajos<span class="badge oculto" id="bTr">0</span></button>
+ <button data-t="chat"><span data-ic="chat"></span>Chat</button>
+ <button data-t="control"><span data-ic="sliders"></span>Control</button>
+ <button data-t="consola"><span data-ic="term"></span>Consola</button>
+ <button data-t="mas"><span data-ic="grid"></span>Más</button>
+</nav>
+<div class="velo" id="velo" onclick="hoja(false)"></div>
+<div class="hoja" id="hoja">
+ <div class="asa"></div>
+ <button onclick="ir('mente')"><span class="ic" data-ic="bulb"></span><span>Mente<small>Lecciones, aprendizajes, planes y propuestas</small></span></button>
+ <button onclick="ir('memoria')"><span class="ic" data-ic="db"></span><span>Memoria<small>Todo lo guardado, por sección</small></span></button>
+ <button onclick="ir('pantalla')"><span class="ic" data-ic="monitor"></span><span>Pantalla<small>El navegador del bot en vivo</small></span></button>
+ <button onclick="ir('archivos')"><span class="ic" data-ic="folder"></span><span>Archivos<small>Explorador del servidor, solo lectura</small></span></button>
+</div>
+<div id="toast"><span id="toastIc"></span><span id="toastTx"></span></div>
+
+<script>
+// ---------- Íconos SVG monocromos ----------
+const IC = {
+ home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+ layers:'<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+ sliders:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+ term:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M12 15h5"/>',
+ grid:'<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',
+ bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>',
+ db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+ monitor:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+ file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ up:'<path d="M12 19V5M5 12l7-7 7 7"/>',
+ refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+ send:'<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ check:'<path d="M5 12l5 5L20 7"/>',
+ warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+ power:'<path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+ cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+ save:'<path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5z"/><path d="M8 3v5h7M8 21v-7h8v7"/>',
+ bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+ chev:'<path d="M9 6l6 6-6 6"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+ spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',
+ play:'<path d="M8 5l11 7-11 7z"/>',
+ tool:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/>',
+ dot:'<circle cx="12" cy="12" r="3"/>'
+};
+const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${IC[n] || ""}</svg>`;
+function pintarIconos(raiz = document) { raiz.querySelectorAll("[data-ic]").forEach(e => { if (!e._ic) { e.insertAdjacentHTML("afterbegin", ic(e.dataset.ic)); e._ic = 1; } }); }
+pintarIconos();
+
+// ---------- Telegram, tema y toques ----------
+const tg = window.Telegram && Telegram.WebApp; if (tg) { tg.ready(); tg.expand(); try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {} }
+const H = {"X-Init-Data": tg ? tg.initData : ""};
+function tema() {
+  const oscuro = tg && tg.colorScheme ? tg.colorScheme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = oscuro ? "dark" : "light";
+  const p = (tg && tg.themeParams) || {};
+  if (p.button_color) { document.documentElement.style.setProperty("--acc", p.button_color); document.documentElement.style.setProperty("--acc-fg", p.button_text_color || "#fff"); }
+  try { const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(); tg && tg.setHeaderColor && tg.setHeaderColor(bg); tg && tg.setBackgroundColor && tg.setBackgroundColor(bg); } catch (e) {}
+}
+tema(); matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", tema); if (tg && tg.onEvent) tg.onEvent("themeChanged", tema);
+const hap = (t = "light") => { try { if (tg && tg.HapticFeedback) t === "sel" ? tg.HapticFeedback.selectionChanged() : tg.HapticFeedback.impactOccurred(t); } catch (e) {} };
+document.addEventListener("click", e => { if (e.target.closest("button,.tap,summary")) hap(e.target.closest(".tabbar,.chips") ? "sel" : "light"); }, true);
+
+// ---------- Utilidades ----------
+let tab = "resumen", ultimoLog = 0, consolaAbajo = true;
+const $ = id => document.getElementById(id);
+// Quita emojis de todo lo que viene de los datos del bot.
+const EMO = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D\u20E3]/gu;
+const lim = s => String(s ?? "").replace(EMO, "").replace(/[ \t]{2,}/g, " ").trim();
+const esc = s => lim(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sid = s => String(s ?? "").replace(/[^\w.-]/g, "");
+const tono = s => /\u2705|^ok\b/i.test(String(s)) ? "ok" : /\u26A0|\u274C|fall[óo]|error/i.test(String(s)) ? "warn" : "";
+const dur = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return h >= 24 ? `${Math.floor(h/24)}d ${h%24}h` : h ? `${h}h ${m}m` : m ? `${m}m ${String(x).padStart(2,"0")}s` : `${x}s`; };
+const hora = segDesdeAhora => new Date(Date.now() + segDesdeAhora * 1000).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hourCycle: "h23"});
+function setH(el, html) { if (typeof el === "string") el = $(el); if (el && el._h !== html) { el._h = html; el.innerHTML = html; } }
+const nivel = (pct, a = 70, b = 85) => pct > b ? "bad" : pct > a ? "warn" : "";
+function barra(id, pct, cls) { $(id).style.width = Math.max(0, Math.min(100, pct || 0)) + "%"; $(id + "w") && ($(id + "w").className = "bar " + (cls || "")); }
+
+// ---------- Navegación ----------
+const NOMBRES = {resumen: "Resumen", chat: "Chat", trabajos: "Trabajos", control: "Control", consola: "Consola", mente: "Mente", memoria: "Memoria", pantalla: "Pantalla", archivos: "Archivos"};
+const EN_MAS = ["mente", "memoria", "pantalla", "archivos"];
+function hoja(on) { $("hoja").classList.toggle("on", on); $("velo").classList.toggle("on", on); }
+function ir(t) {
+  hoja(false); tab = t; $("titulo").textContent = NOMBRES[t] || t;
+  document.querySelectorAll(".tabbar button").forEach(x => x.classList.toggle("on", x.dataset.t === t || (x.dataset.t === "mas" && EN_MAS.includes(t))));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("on", s.id === t || s.id === t + "-s"));
+  window.scrollTo(0, 0);
+  if (t === "memoria") cargarMemoria();
+  if (t === "pantalla") pantalla();
+  if (t === "archivos" && !fcargado) abrir(fdir);
+  if (t === "consola") { const c = $("consola"); c.scrollTop = c.scrollHeight; if (fuente !== "bot") { clearTimeout(rTimer); cargarRender(); } }
+}
+document.querySelectorAll(".tabbar button").forEach(b => b.onclick = () => b.dataset.t === "mas" ? hoja(!$("hoja").classList.contains("on")) : ir(b.dataset.t));
+addEventListener("scroll", () => $("cab").classList.toggle("borde", scrollY > 4), {passive: true});
+
+// ---------- Estado ----------
+async function estado() {
+  try {
+    const r = await fetch(`/api/estado?desde=${ultimoLog}`, {headers: H});
+    if (r.status === 401) { conexion("bad", "Sin acceso", tg ? "Solo el dueño puede abrir este panel" : "Escribe /web al bot en Telegram para abrirlo aquí"); return; }
+    const d = await r.json(); pintar(d);
+  } catch (e) { conexion("warn", "Reconectando", "Sin conexión, reintentando…"); }
+}
+function conexion(cls, corto, largo) { $("pt").className = "dot " + cls; $("linea").textContent = corto; $("hero").textContent = largo; }
+
+function pintar(d) {
+  const s = d.sistema || {}, ia = d.ia || {}, m = d.mente || {}, w = d.webhook || {}, rc = d.recursos || {}, uso = d.uso || {};
+  const tr = d.trabajos || [];
+  conexion("ok", "En línea", "Agente en línea");
+  $("up").textContent = "Encendido hace " + dur(d.uptime_s || 0);
+  $("ver").textContent = "ver. " + (s.version || "?");
+  const chipsH = [
+    w.ok === undefined ? '<span class="chip">Telegram: revisando</span>' : w.ok ? `<span class="chip ok">Telegram conectado${w.pendientes ? " · " + w.pendientes + " en espera" : ""}</span>` : `<span class="chip bad">Telegram: ${esc(w.error || "revisar")}</span>`,
+    `<span class="chip ${s.motor === "ocupado" ? "acc" : ""}">Motor de video ${esc(s.motor || "–")}</span>`,
+    `<span class="chip ${ia.rapido ? "acc" : ""}">Modo rápido ${ia.rapido ? "activo" : "apagado"}</span>`];
+  setH("heroChips", chipsH.join(""));
+
+  // KPIs
+  $("ntr").innerHTML = `${tr.length}<small>/ ${s.max_paralelo ?? "–"}</small>`;
+  $("cola").textContent = tr.length ? `${tr.filter(t => t.tipo === "video").length} video · ${tr.filter(t => t.tipo !== "video").length} agente` : "Nada corriendo";
+  $("bTr").textContent = tr.length; $("bTr").classList.toggle("oculto", !tr.length);
+  $("vel").innerHTML = ia.promedio_s != null ? `${String(ia.promedio_s).replace(".", ",")}<small>s</small>` : "–";
+  $("velsub").textContent = ia.respuestas ? `promedio de ${ia.respuestas} respuestas` : "aún sin respuestas";
+  $("usoHoy").textContent = uso.total_hoy ?? "–";
+  $("usoTop").textContent = (uso.hoy || [])[0] ? `más usada: ${lim(uso.hoy[0][0])}` : "sin uso hoy";
+  $("err").textContent = d.errores ?? "–"; $("err").style.color = d.errores ? "var(--bad)" : "var(--ok)";
+  $("wh").textContent = d.errores ? "toca para ver la consola" : "todo limpio";
+
+  // En curso (vista rápida)
+  $("enCursoCard").classList.toggle("oculto", !tr.length);
+  setH("enCurso", tr.map(t => { const e = t.eta || {};
+    return `<button class="prev tap" onclick="ir('trabajos')"><div class="row" style="width:100%"><b class="trunc" style="flex:1">${esc(t.titulo)}</b><span class="sub xs num">${dur(t.transcurrido_s)}</span></div>
+     <div class="sub xs trunc" style="width:100%">${esc(t.etapa)}</div><div class="bar" style="width:100%"><i style="width:${e.pct || 3}%"></i></div></button>`; }).join(""));
+
+  // Servidor
+  const lim_ = s.ram_limite_mb || 512, ramPct = s.ram_mb ? Math.round(s.ram_mb / lim_ * 100) : 0;
+  $("ram").innerHTML = s.ram_mb != null ? `${s.ram_mb}<span class="sub" style="font-size:13px;font-weight:500"> / ${lim_} MB</span>` : "–";
+  barra("ramb", ramPct, nivel(ramPct) || "");
+  $("cpu").textContent = s.cpu != null ? `${Math.round(s.cpu)}%` : "–"; barra("cpub", s.cpu, nivel(s.cpu, 75, 90));
+  $("disco").innerHTML = s.disco_gb != null ? `${String(s.disco_gb).replace(".", ",")}<span class="sub" style="font-size:13px;font-weight:500"> GB${rc.disco_total_gb ? " de " + String(rc.disco_total_gb).replace(".", ",") : ""}</span>` : "–";
+  barra("discob", rc.disco_usado_pct, nivel(rc.disco_usado_pct, 80, 92));
+  $("discosub").textContent = rc.disco_usado_pct != null ? `${rc.disco_usado_pct}% usado` : "";
+  const hist = d.historia || [];
+  grafico("gram", hist.map(h => h[1] || 0), lim_); grafico("gcpu", hist.map(h => h[2] || 0), 100);
+
+  // IA
+  const lista = ia.lista || [];
+  const okN = lista.filter(x => x.ok).length;
+  $("iaResumen").className = "chip " + (okN === lista.length ? "ok" : okN ? "warn" : "bad");
+  $("iaResumen").textContent = `${okN} de ${lista.length} disponibles`;
+  setH("ias", lista.map(x => {
+    const t = x.ms != null ? (x.ms < 1000 ? `${x.ms} ms` : `${(x.ms / 1000).toFixed(1).replace(".", ",")} s`) : "midiendo";
+    const det = [x.ok ? "" : x.motivo, x.cuota, x.hace_s != null ? `medido hace ${dur(x.hace_s)}` : ""].filter(Boolean).map(lim).join(" · ");
+    return `<div class="ia-row"><i class="dot ${x.ok ? "ok" : "bad"}"></i><div class="tx"><div class="trunc"><b>${esc(x.nombre)}</b> <span class="sub">${esc((x.modelo || "").split("/").pop())}</span></div>${det ? `<div class="sub xs" style="overflow-wrap:anywhere">${esc(det)}</div>` : ""}</div>
+      <div class="ms ${x.ok ? "ok" : "bad"}">${t}<small>${x.fuente === "ping" ? "ping" : "respuesta"}</small></div></div>`;
+  }).join("") || '<div class="vacio">Sin datos</div>');
+  const pz = d.pausas || [];
+  $("pausasBox").classList.toggle("oculto", !pz.length); $("npausas").textContent = pz.length;
+  setH("pausas", pz.map(p => `<div class="it"><div class="tx"><div class="trunc" style="font-size:14px">${esc(p.modelo)}</div><div class="sub xs">vuelve a las ${hora(p.resta_s)}</div></div><span class="chip warn num">${dur(p.resta_s)}</span></div>`).join(""));
+
+  // Uso de herramientas
+  const top = uso.hoy || [], maxU = Math.max(1, ...top.map(x => x[1]));
+  setH("usoBarras", top.length ? top.slice(0, 6).map(([n, c]) => `<div class="hb"><span class="n">${esc(n)}</span><span class="c">${c}</span><div class="bar"><i style="width:${Math.round(c / maxU * 100)}%"></i></div></div>`).join("") : '<div class="sub">Sin herramientas usadas hoy</div>');
+  const dias = uso.dias || [], maxD = Math.max(1, ...dias.map(x => x[1]));
+  setH("usoDias", dias.map((x, i) => `<div class="${i === dias.length - 1 ? "hoy" : ""}"><span class="num">${x[1]}</span><i style="height:${Math.round(x[1] / maxD * 56)}px"></i><span>${esc(x[0].split("-").reverse().join("/"))}</span></div>`).join(""));
+
+  // Últimas respuestas
+  const ahoraS = Date.now() / 1000;
+  setH("ult", (ia.ultimas || []).map(x => {
+    const f = x.fallos || [];
+    const cab = `<div class="row" style="width:100%"><span class="trunc" style="flex:1;font-weight:600">${esc(x.ia)}</span><span class="ms" style="font-size:14px">${String(x.seg).replace(".", ",")} s</span></div>
+      <div class="row" style="width:100%;justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:4px"><span class="chip">${esc(x.nivel)}</span><span class="chip">${x.herramientas} herr.</span>${f.length ? `<span class="chip warn">${f.length} intento${f.length > 1 ? "s" : ""} fallido${f.length > 1 ? "s" : ""}</span>` : ""}${x.t ? `<span class="sub xs">hace ${dur(ahoraS - x.t)}</span>` : ""}</div>`;
+    return f.length ? `<details class="in" style="border-bottom:1px solid var(--line);margin:0" ontoggle="abiertos['u${x.t}']=this.open" ${abiertos["u" + x.t] ? "open" : ""}><summary style="text-transform:none;letter-spacing:0;color:var(--fg);flex-direction:column;align-items:flex-start;padding:8px 0;font-size:15px">${cab}</summary><div class="proc">${f.map(z => `<div class="warn">${esc(z)}</div>`).join("")}</div></details>`
+      : `<div style="padding:8px 0;border-bottom:1px solid var(--line)">${cab}</div>`;
+  }).join("") || '<div class="sub">Ninguna todavía</div>');
+
+  // Navegador y memoria resumida
+  $("navv").textContent = s.navegador_abierto ? "Abierto" : "Cerrado";
+  $("nav").textContent = s.navegador_abierto ? `${s.pestanas} pestaña(s)` : "se abre cuando un trabajo navega";
+  $("mres").textContent = m.guardado_hace_s != null ? "hace " + dur(m.guardado_hace_s) : "–";
+  $("mresd").textContent = `último respaldo${m.donde ? " en " + m.donde : ""} · ${m.lecciones ?? 0} lecciones`;
+
+  // Mente
+  $("mrec").textContent = m.recuerdos ?? "–"; $("mlec").textContent = m.lecciones ?? "–"; $("mnot").textContent = m.notas ?? "–";
+  $("mcomp").textContent = `${m.complementos || 0} complementos · ${m.paquetes || 0} paquetes`;
+  $("mgua").textContent = m.guardado_hace_s != null ? "hace " + dur(m.guardado_hace_s) : "–"; $("mdon").textContent = m.donde ? "en " + m.donde : "";
+  const lecs = m.ultimas_lecciones || [];
+  setH("mlecs", lecs.length ? lecs.map((l, i) => `<div class="it"><span class="tx">${esc(l)}</span><button class="ib" aria-label="Olvidar" onclick="accion('leccion','${i}','¿Olvidar esta lección?')">${ic("x")}</button></div>`).join("") : '<div class="sub">Ninguna todavía</div>');
+  const apr = m.aprendido || [];
+  $("maprst").textContent = `Próximo repaso en ${Math.max(0, 6 - (m.turnos_sin_aprender || 0))} mensajes tuyos` + (m.aprendi_hace_s != null ? ` · último repaso hace ${dur(m.aprendi_hace_s)}` : "");
+  setH("mapr", apr.length ? apr.map(x => `<div class="it"><div class="tx">${esc(x.dato)}<div class="sub xs">hace ${dur(x.hace_s)}</div></div></div>`).join("") : '<div class="sub">Nada todavía</div>');
+  const pls = m.planes || [];
+  setH("mplanes", pls.length ? pls.map(p => `<div class="it"><div class="tx"><b>#${esc(p.id)} ${esc(p.objetivo)}</b>${(p.pasos || []).map(x => `<div class="sub xs">${esc(x)}</div>`).join("")}</div></div>`).join("") : '<div class="sub">Ninguno</div>');
+  const pro = m.propuestas || [];
+  $("mprost").textContent = m.proactivo_pausado ? "En pausa" : `Reviso a las ${lim(m.proactivo_horas || "9,19")} h`;
+  setH("mpro", pro.length ? pro.map(x => `<div class="it"><div class="tx">${esc(x.texto)}<div class="sub xs">hace ${dur(x.hace_s)}</div></div></div>`).join("") : '<div class="sub">Ninguna todavía</div>');
+
+  // Control
+  $("rapidoTxt").textContent = ia.rapido ? "Activo: Groq primero en lo simple" : "Apagado: Gemini primero";
+  $("btnRapido").classList.toggle("on", !!ia.rapido);
+  const pns = d.paneles || [];
+  $("panelesBox").classList.toggle("oculto", !pns.length);
+  const haceP = p => !p.t ? "llenándose…" : "hace " + dur(Date.now() / 1000 - p.t);
+  setH("paneles", pns.map(p => `<div class="it"><div class="tx"><b>${esc(p.titulo)}</b><div style="white-space:pre-wrap;margin-top:2px">${esc(p.valor || "")}</div><div class="sub xs">${haceP(p)} · cada ${esc(p.cada_h)} h${p.error ? " · ⚠ " + esc(p.error).slice(0, 60) : ""}</div></div><button class="ib" aria-label="Actualizar" onclick="accion('panel_refrescar','${sid(p.id)}')">${ic("clock")}</button><button class="ib peligro" aria-label="Quitar" onclick="accion('panel_quitar','${sid(p.id)}','¿Quitar «${esc(p.titulo)}»?')">${ic("x")}</button></div>`).join(""));
+  const ts = d.tareas || [];
+  const cuandoT = t => `${esc(t.cuando)}${t.cada_min ? " · cada " + t.cada_min + " min" : ""}`;
+  setH("tareas2", ts.length ? ts.map(t => `<div class="it"><div class="tx">#${esc(t.id)} ${esc(t.texto).slice(0, 80)}<div class="sub xs">${cuandoT(t)}</div></div><button class="ib peligro" aria-label="Cancelar tarea" onclick="accion('tarea','${sid(t.id)}','¿Cancelar la tarea #${sid(t.id)}?')">${ic("x")}</button></div>`).join("") : '<div class="sub">Ninguna</div>');
+  setH("tareas", ts.length ? ts.map(t => `<div class="it"><div class="tx">#${esc(t.id)} ${esc(t.texto).slice(0, 80)}<div class="sub xs">${cuandoT(t)}</div></div></div>`).join("") : '<div class="sub">Ninguna</div>');
+
+  // Trabajos
+  setH("lista", tr.length ? tr.map(trabajoHtml).join("") : `<div class="card vacio">${ic("layers")}<div style="margin-top:8px">No hay trabajos en curso</div></div>`);
+  const rec = d.recientes || [];
+  setH("recientes", rec.length ? `<div class="ct" style="margin:18px 2px 10px"><span>Terminados hace poco</span><span class="sub xs" style="text-transform:none;letter-spacing:0">${rec.length}</span></div>` + rec.map(recienteHtml).join("") : "");
+  const ud = d.ultimo_debate, enVivo = tr.some(t => (t.debate || []).length);
+  setH("udebate", ud && !enVivo && (ud.transcript || []).length ? `<div class="card"><div class="ct"><span>Último debate</span>${ic("chat")}</div><div class="sub">«${esc(ud.pregunta).slice(0, 160)}»</div>${debateHtml(ud.transcript, "deb-ultimo", false)}</div>` : "");
+
+  // Consola en vivo
+  const c = $("consola"); consolaAbajo = c.scrollHeight - c.scrollTop - c.clientHeight < 40;
+  for (const l of d.logs || []) { const div = document.createElement("div"); div.className = l.nivel; div.textContent = lim(l.t); filtrarUna(div); c.appendChild(div); ultimoLog = l.id; }
+  while (c.childNodes.length > 2000) c.removeChild(c.firstChild);
+  if (consolaAbajo) c.scrollTop = c.scrollHeight;
+}
+
+// ---------- Tarjetas de trabajos (se expanden al tocar) ----------
+const abiertos = {}, debAbierto = {};
+function alternar(id) { abiertos[id] = !esAbierto(id, id.startsWith("job-")); if (estadoCache) _pintar({...estadoCache, logs: []}); }
+const esAbierto = (id, def) => abiertos[id] ?? def;
+function pasoIco(p) { const s = String(p[1] || ""); return s.includes("\u2705") ? ic("check", "s ok") : (s.includes("\u26A0") || s.includes("\u274C")) ? ic("warn", "s warn") : ic("clock", "s run"); }
+function trabajoHtml(t) {
+  const e = t.eta || {}, id = "job-" + sid(t.id), ab = esAbierto(id, true);
+  const etaTxt = e.pasado ? "tardando más de lo normal" : `faltan ~${dur(e.resta_s || 0)}`;
+  const pasos = (t.pasos || []).slice(-10).map(p => `<li>${pasoIco(p)}<span>${esc(p[0])}</span></li>`).join("");
+  const cuerpo = `${pasos ? `<div class="sec"><span>Pasos</span><span>${(t.pasos || []).length}</span></div><ul class="tl">${pasos}</ul>` : ""}${procesoHtml(t.proceso, true)}${debateHtml(t.debate, "deb-" + sid(t.id), true)}`;
+  return `<div class="card job ${ab ? "abierto" : ""}">
+   <button class="cab" onclick="alternar('${id}')">
+    <div class="row" style="align-items:flex-start"><span class="tit">${esc(t.titulo)}</span>${ic("chev", "chev")}</div>
+    <div class="meta"><span class="chip acc">#${esc(t.id)}</span><span class="chip">${t.tipo === "video" ? "Video" : "Agente"}</span>${t.etapa ? `<span class="chip">${esc(t.etapa)}</span>` : ""}${e.pasado ? '<span class="chip warn">Más lento que lo normal</span>' : ""}</div>
+    <div class="bar ${e.pasado ? "warn" : ""}"><i style="width:${e.pct || 3}%"></i></div>
+    <div class="eta"><span>${dur(t.transcurrido_s)} transcurrido</span><span>${etaTxt}${e.aprendido ? "" : " (estimado)"}${e.pct != null ? " · " + e.pct + "%" : ""}</span></div>
+    ${t.ahora ? `<div class="ahora">${ic("play", "s")}<span>${esc(t.ahora)}</span></div>` : ""}
+    ${t.ia ? `<div class="sub xs" style="margin-top:8px;display:flex;gap:6px;align-items:center">${ic("spark", "s")}${esc(t.ia)}</div>` : ""}
+   </button>
+   ${ab && cuerpo ? `<div class="cuerpo">${cuerpo}</div>` : ""}
+   <div class="pie"><button class="ib peligro" onclick="cancelar('${sid(t.id)}')">${ic("stop", "s")}Detener</button></div></div>`;
+}
+function recienteHtml(r) {
+  const id = "rec-" + sid(r.id), ab = esAbierto(id, false), pr = r.proceso || [];
+  const bien = !tono(r.resultado) || tono(r.resultado) === "ok";
+  return `<div class="card job ${ab ? "abierto" : ""}"><button class="cab" onclick="alternar('${id}')">
+    <div class="row" style="align-items:flex-start"><span class="tit" style="font-size:15px">${esc(r.titulo).slice(0, 100)}</span>${pr.length ? ic("chev", "chev") : ""}</div>
+    <div class="meta"><span class="chip">#${esc(r.id)}</span><span class="chip num">${dur(r.duro_s)}</span>${r.fin_t ? `<span class="chip">hace ${dur(Date.now() / 1000 - r.fin_t)}</span>` : ""}${r.resultado ? `<span class="chip ${bien ? "ok" : "warn"}">${esc(r.resultado).slice(0, 60)}</span>` : ""}</div>
+   </button>${ab && pr.length ? `<div class="cuerpo">${procesoHtml(pr, false)}</div>` : ""}</div>`;
+}
+function procesoHtml(pr) {
+  if (!pr || !pr.length) return "";
+  const lineas = pr.map(p => `<div class="${tono(p[1])}"><span class="t">${Math.floor(p[0] / 60)}:${String(p[0] % 60).padStart(2, "0")}</span><span>${esc(p[1])}</span></div>`).join("");
+  return `<div class="sec"><span>Proceso interno</span><span>${pr.length}</span></div><div class="proc">${lineas}</div>`;
+}
+function debateHtml(tr, id, vivo) {
+  if (!tr || !tr.length) return "";
+  if (!(id in debAbierto)) debAbierto[id] = vivo;
+  const msjs = tr.map(e => `<div class="msj ${sid(e.rol)} ${sid(e.estado)}"><div class="q">${esc(e.quien)}${e.ia ? `<span>${esc(e.ia.split("/").pop())}</span>` : ""}</div>${e.estado === "escribiendo" ? "escribiendo…" : esc(e.texto)}</div>`).join("");
+  return `<details class="in" ${debAbierto[id] ? "open" : ""} ontoggle="debAbierto['${id}']=this.open"><summary><span>Debate${vivo ? " en vivo" : ""} · ${tr.filter(e => e.estado !== "escribiendo").length}/${tr.length}</span>${ic("chev", "chev")}</summary><div class="dc">${msjs}</div></details>`;
+}
+
+// ---------- Consola: fuentes, búsqueda y filtros ----------
+let fuente = "bot", soloErr = false, rTimer = null;
+const ES_ERR = /ERROR|CRITICAL|ERR|Traceback|Exception/i;
+function filtrarUna(div) {
+  const q = $("ftxt").value.trim().toLowerCase();
+  const ok = (!q || div.textContent.toLowerCase().includes(q)) && (!soloErr || ES_ERR.test(div.className + " " + div.textContent.slice(0, 200)));
+  div.classList.toggle("oculto", !ok);
+}
+function filtrar() { document.querySelectorAll(`#${fuente === "bot" ? "consola" : "rlog"} > div`).forEach(filtrarUna); }
+$("ftxt").oninput = filtrar;
+$("ferr").onclick = () => { soloErr = !soloErr; $("ferr").classList.toggle("on", soloErr); filtrar(); toast(soloErr ? "Mostrando solo errores" : "Mostrando todo", true); };
+$("fcop").onclick = async () => {
+  const caja = $(fuente === "bot" ? "consola" : "rlog");
+  const txt = [...caja.children].filter(x => !x.classList.contains("oculto")).map(x => x.textContent).join("\n");
+  try { await navigator.clipboard.writeText(txt); toast("Copiado (" + txt.split("\n").length + " líneas)", true); } catch (e) { toast("No pude copiar", false); }
+};
+document.querySelectorAll("#fuentes button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#fuentes button").forEach(x => x.classList.toggle("on", x === b));
+  fuente = b.dataset.f; $("consola").classList.toggle("oculto", fuente !== "bot"); $("rlog").classList.toggle("oculto", fuente === "bot");
+  clearTimeout(rTimer); if (fuente !== "bot") cargarRender(); else filtrar();
+});
+const DEPLOY = {live: ["en vivo", "ok"], deactivated: ["anterior", ""], build_failed: ["falló al construir", "bad"], update_failed: ["falló al arrancar", "bad"], canceled: ["cancelado", ""],
+  build_in_progress: ["construyendo", "warn"], update_in_progress: ["arrancando", "warn"], created: ["en cola", "warn"], pre_deploy_in_progress: ["preparando", "warn"]};
+async function cargarRender() {
+  if (fuente === "bot" || tab !== "consola") return;
+  const caja = $("rlog"), abajo = caja.scrollHeight - caja.scrollTop - caja.clientHeight < 40 || !caja.children.length;
+  try {
+    const r = await (await fetch(`/api/render?tipo=${fuente}`, {headers: H})).json();
+    if (!r.ok) caja.innerHTML = `<div class="WARN">${esc(r.error)}</div>`;
+    else if (fuente === "deploys") caja.innerHTML = r.datos.map(x => { const st = DEPLOY[x.estado] || [x.estado, ""];
+      return `<div class="dep ${/fail|cancel/.test(x.estado) ? "ERR" : ""}"><span><b class="mono">${esc(x.commit)}</b> ${esc(x.mensaje).slice(0, 70)}<br><span class="sub xs">${esc((x.creado || "").replace("T", " ").slice(0, 16))} UTC · ${esc(x.motivo || "")}</span></span><span class="chip ${st[1]}">${esc(st[0])}</span></div>`; }).join("") || '<div class="sub">Sin despliegues</div>';
+    else { caja.innerHTML = r.datos.map(x => `<div class="${sid(x.nivel)}">${esc(x.t)} ${esc(x.msg)}</div>`).join("") || '<div class="sub">Sin líneas en las últimas 6 horas</div>'; filtrar(); }
+    if (abajo) caja.scrollTop = caja.scrollHeight;
+  } catch (e) { caja.innerHTML = '<div class="WARN">No pude leer Render</div>'; }
+  rTimer = setTimeout(cargarRender, 10000);
+}
+
+function grafico(id, datos, max) {
+  const c = $(id); if (!c || !datos.length || !c.clientWidth) return;
+  const r = window.devicePixelRatio || 1, W = c.clientWidth * r, Hh = c.clientHeight * r; c.width = W; c.height = Hh;
+  const x = c.getContext("2d"); x.clearRect(0, 0, W, Hh);
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim() || "#5b8cff";
+  const g = x.createLinearGradient(0, 0, 0, Hh); g.addColorStop(0, col + "55"); g.addColorStop(1, col + "00");
+  x.beginPath(); datos.forEach((v, i) => { const px = datos.length > 1 ? i / (datos.length - 1) * W : W, py = Hh - Math.min(v / max, 1) * (Hh - 3 * r) - 1.5 * r; i ? x.lineTo(px, py) : x.moveTo(px, py); });
+  x.strokeStyle = col; x.lineWidth = 2 * r; x.lineJoin = "round"; x.stroke(); x.lineTo(W, Hh); x.lineTo(0, Hh); x.closePath(); x.fillStyle = col.startsWith("#") && col.length === 7 ? g : col; if (!(col.startsWith("#") && col.length === 7)) x.globalAlpha = .12; x.fill(); x.globalAlpha = 1;
+}
+
+// ---------- Chat web ----------
+function chatBurbuja(quien, txt, id) {
+  const d = document.createElement("div"); d.className = "card"; if (id) d.id = id;
+  d.style.cssText = quien === "yo" ? "margin-left:15%;background:rgba(80,140,255,.18)" : "margin-right:8%";
+  d.innerHTML = `<div class="sub xs">${quien === "yo" ? "Tú" : "Bot"}</div><div style="white-space:pre-wrap;word-break:break-word">${esc(txt)}</div>`;
+  $("chatLista").appendChild(d); window.scrollTo(0, document.body.scrollHeight); return d;
+}
+async function chatEnviar() {
+  const t = $("chatTx").value.trim(); if (!t) return; $("chatTx").value = "";
+  chatBurbuja("yo", t); const b = chatBurbuja("bot", "Pensando…");
+  try {
+    const r = await (await fetch("/api/chat", {method: "POST", headers: {...H, "Content-Type": "application/json"}, body: JSON.stringify({texto: t})})).json();
+    if (!r.tid) { b.lastChild.textContent = "No pude: " + (r.error || "error"); return; }
+    for (let i = 0; i < 400; i++) {
+      await new Promise(z => setTimeout(z, 3000));
+      const e = await (await fetch(`/api/chat?tid=${encodeURIComponent(r.tid)}`, {headers: H})).json();
+      if (e.estado && e.estado !== "corriendo") { b.lastChild.textContent = lim(e.respuesta || "Listo (míralo en Telegram)"); break; }
+      if (e.pasos && e.pasos.length) b.lastChild.textContent = "⏳ " + lim(e.pasos[e.pasos.length - 1]);
+    }
+  } catch (e) { b.lastChild.textContent = "Se cortó la conexión; la respuesta igual llega a Telegram."; }
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function toast(t, ok) {
+  const e = $("toast"); e.className = ok === undefined ? "on" : ok ? "on ok" : "on mal";
+  $("toastIc").innerHTML = ok === undefined ? ic("clock", "spin") : ok ? ic("check") : ic("warn");
+  $("toastTx").textContent = lim(t); clearTimeout(e._t); e._t = setTimeout(() => e.className = "", 4500);
+}
+
+async function accion(n, arg = "", pregunta = "") {
+  const go = async () => {
+    toast("Trabajando…"); hap("medium");
+    try {
+      const r = await (await fetch(`/api/accion?n=${n}&arg=${encodeURIComponent(arg)}`, {method: "POST", headers: H})).json();
+      toast(r.msg, !!r.ok); $("resacc").textContent = lim(r.msg); estado();
+      if (n === "automejorar" && r.ok && r.msg.startsWith("Reviso")) setTimeout(() => ir("trabajos"), 1500);
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(r.ok ? "success" : "error");
+    } catch (e) { toast("No pude hacerlo (¿se está reiniciando?)", false); }
+  };
+  if (!pregunta) return go();
+  if (tg && tg.showConfirm) tg.showConfirm(pregunta, ok => ok && go()); else if (confirm(pregunta)) go();
+}
+
+async function cancelar(id) {
+  const go = () => fetch(`/api/cancelar?tid=${id}`, {method: "POST", headers: H}).then(() => { toast("Trabajo #" + id + " detenido", true); estado(); });
+  if (tg && tg.showConfirm) tg.showConfirm(`¿Detener el trabajo #${id}?`, ok => ok && go()); else if (confirm("¿Detener?")) go();
+}
+
+async function cargarMemoria() {
+  try {
+    const d = await (await fetch("/api/memoria", {headers: H})).json();
+    const orden = ["notas", "tareas", "trabajos", "ultimo_video", "lecciones", "complementos", "pendientes", "historial", "duraciones"];
+    const claves = [...orden.filter(k => k in d), ...Object.keys(d).filter(k => !orden.includes(k))];
+    $("mem").innerHTML = claves.map(k => {
+      const v = d[k]; const n = Array.isArray(v) ? v.length : (v && typeof v === "object") ? Object.keys(v).length : null;
+      const cuerpo = Array.isArray(v) && v.every(x => typeof x === "string") ? v.map(x => "• " + esc(x)).join("\n") : esc(JSON.stringify(v, null, 1));
+      return `<details${k === "notas" ? " open" : ""}><summary><span>${esc(k)}</span><span style="display:flex;gap:8px;align-items:center">${n != null ? `<span class="chip">${n}</span>` : ""}${ic("chev", "chev")}</span></summary><div class="dc"><pre>${cuerpo}</pre></div></details>`;
+    }).join("");
+  } catch (e) { $("mem").innerHTML = '<div class="vacio">No pude leer la memoria</div>'; }
+}
+
+// ---------- Archivos ----------
+let fdir = "/", fcargado = false, fsel = "";
+const peso = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n/1024).toFixed(1)} KB` : n < 1073741824 ? `${(n/1048576).toFixed(1)} MB` : `${(n/1073741824).toFixed(2)} GB`;
+const unir = (a, b) => (a.replace(/\/+$/, "") + "/" + b).replace(/\/+/g, "/");
+let fitems = [];
+async function abrir(r) {
+  $("finfo").textContent = "Cargando…";
+  try {
+    const d = await (await fetch(`/api/archivos?ruta=${encodeURIComponent(r)}`, {headers: H})).json();
+    if (!d.ok) { $("finfo").textContent = lim(d.error); return; }
+    fdir = d.ruta; fcargado = true; $("fruta").value = fdir; fitems = d.items;
+    $("finfo").textContent = `${d.items.length} elementos${d.recortado ? " (recortado)" : ""} · ${d.root ? "root" : "usuario sin root"} · solo lectura`;
+    $("flista").innerHTML = d.items.map((x, i) => `<button class="fi" onclick="tocar(${i})"><span class="ic ${x.d ? "d" : ""}">${ic(x.d ? "folder" : x.l ? "link" : "file", "s")}</span><span class="nom">${esc(x.n)}${x.l ? ` <span class="sub">→ ${esc(x.l)}</span>` : ""}</span><span class="met">${x.d ? "" : peso(x.t)}<br>${esc(x.p)}</span></button>`).join("") || '<div class="vacio">Carpeta vacía</div>';
+    window.scrollTo(0, 0);
+  } catch (e) { $("finfo").textContent = "No pude leer la carpeta"; }
+}
+function tocar(i) { const x = fitems[i]; const r = unir(fdir, x.n); x.d ? abrir(r) : verArch(r); }
+async function verArch(r) {
+  fsel = r; $("fver").classList.remove("oculto"); $("fvnom").textContent = r.split("/").pop(); $("fvinfo").textContent = r; $("fvcuerpo").innerHTML = '<div class="sub">Cargando…</div>';
+  $("fver").scrollIntoView({behavior: "smooth", block: "start"});
+  try {
+    const d = await (await fetch(`/api/archivos?ver=1&ruta=${encodeURIComponent(r)}`, {headers: H})).json();
+    if (!d.ok) { $("fvcuerpo").innerHTML = `<div class="sub">${esc(d.error)}</div>`; return; }
+    $("fvinfo").textContent = `${r}${d.tam ? " · " + peso(d.tam) : ""}${d.recortado ? " · se muestran los primeros 300 KB" : ""}`;
+    $("fvcuerpo").innerHTML = d.imagen ? `<img src="${d.imagen}">` : d.binario ? '<div class="sub">Archivo binario: usa «Telegram» para descargarlo.</div>' : `<pre>${String(d.texto ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</pre>`;
+  } catch (e) { $("fvcuerpo").innerHTML = '<div class="sub">No pude abrirlo</div>'; }
+}
+async function enviarArch() {
+  try { const r = await (await fetch(`/api/accion?n=enviar_archivo&arg=${encodeURIComponent(fsel)}`, {method: "POST", headers: H})).json(); toast(r.msg || "Listo", r.ok !== false); }
+  catch (e) { toast("No pude enviarlo", false); }
+}
+
+// ---------- Pantalla ----------
+let pUrl = null, pCorriendo = false;
+async function pantalla() {
+  if (tab !== "pantalla") { pCorriendo = false; return; }
+  if (pCorriendo === "loop") return; pCorriendo = "loop";
+  const ciclo = async () => {
+    if (tab !== "pantalla") { pCorriendo = false; return; }
+    try {
+      const r = await fetch("/api/pantalla", {headers: H});
+      if (r.status === 204) { $("pvivo").className = "chip"; $("pvivo").textContent = "cerrado"; setH("pimg", '<div class="card vacio">El navegador está cerrado. Aparece apenas un trabajo abra una página.</div>'); }
+      else if (r.ok) { const b = await r.blob(); const u = URL.createObjectURL(b); $("pimg")._h = ""; $("pimg").innerHTML = `<img src="${u}" alt="Pantalla del navegador">`; if (pUrl) URL.revokeObjectURL(pUrl); pUrl = u; $("pvivo").className = "chip ok"; $("pvivo").textContent = "en vivo"; }
+    } catch (e) {}
+    setTimeout(ciclo, 3000);
+  };
+  ciclo();
+}
+
+// ---------- Deslizar para refrescar ----------
+(function () {
+  let y0 = null, dy = 0; const p = $("ptr");
+  addEventListener("touchstart", e => { if (scrollY <= 0 && !e.target.closest(".term,.proc,pre,.hoja,.chips,input")) { y0 = e.touches[0].clientY; dy = 0; } else y0 = null; }, {passive: true});
+  addEventListener("touchmove", e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); const k = Math.min(dy, 110);
+    p.style.transition = "none"; p.style.opacity = Math.min(1, k / 70); p.style.transform = `translateY(${k * .6 - 30}px) rotate(${k * 3}deg)`; }, {passive: true});
+  addEventListener("touchend", async () => { if (y0 == null) return; y0 = null; p.style.transition = "all .25s";
+    if (dy > 75) { hap("medium"); p.classList.add("gira"); p.style.transform = "translateY(20px)";
+      await Promise.all([estado(), tab === "memoria" ? cargarMemoria() : 0, tab === "archivos" ? abrir(fdir) : 0, tab === "consola" && fuente !== "bot" ? (clearTimeout(rTimer), cargarRender()) : 0]);
+      setTimeout(() => { p.classList.remove("gira"); p.style.opacity = 0; p.style.transform = "translateY(-50px)"; }, 350);
+    } else { p.style.opacity = 0; p.style.transform = "translateY(-50px)"; } dy = 0; });
+})();
+
+let estadoCache = null;
+const _pintar = pintar; pintar = d => { estadoCache = d; _pintar(d); };
+estado(); setInterval(estado, 2000);
+
+document.getElementById("cerrar").onclick = () => { try { hap("medium"); } catch (e) {} if (tg && tg.close) tg.close(); else { window.close(); setTimeout(() => { if (!window.closed) history.length > 1 ? history.back() : (location.href = "about:blank"); }, 150); } };
+</script>
+</body>
+</html>
