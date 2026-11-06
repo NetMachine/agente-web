@@ -20,9 +20,31 @@ const _canje = (async () => {
 const _fetch = window.fetch.bind(window);
 window.fetch = async (u, o = {}) => {
   if (typeof u === "string" && u.startsWith("/")) { await _canje; u = API + u; o = {...o, headers: {...(o.headers || {}), Authorization: "Bearer " + _sesion}}; }
-  return _fetch(u, o);
+  const r = await _fetch(u, o);
+  if (r.status === 401 && !(window.tg && tg.initData)) { localStorage.removeItem("sesion"); _sesion = ""; pedirClave("La sesión venció. Entra de nuevo."); }
+  return r;
 };
 function salirWeb() { localStorage.removeItem("sesion"); location.reload(); }
+function pedirClave(msg) {
+  if (document.getElementById("login")) { document.getElementById("loginMsg").textContent = msg || ""; return; }
+  const d = document.createElement("div"); d.id = "login";
+  d.style.cssText = "position:fixed;inset:0;z-index:99;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;font-family:-apple-system,system-ui,sans-serif";
+  d.innerHTML = `<form style="width:min(320px,86vw);display:flex;flex-direction:column;gap:12px" onsubmit="entrarClave(event)">
+   <div style="font-size:22px;font-weight:700">Agente</div><div style="opacity:.7;font-size:14px">Contraseña del panel</div>
+   <input id="loginClave" type="password" autocomplete="current-password" style="padding:12px;border-radius:12px;border:1px solid #333;background:#16161c;color:#fff;font-size:16px">
+   <button style="padding:12px;border-radius:12px;border:0;background:#4f7cff;color:#fff;font-weight:700;font-size:16px">Entrar</button>
+   <div id="loginMsg" style="color:#ff8080;font-size:14px">${msg || ""}</div></form>`;
+  document.body.appendChild(d); setTimeout(() => document.getElementById("loginClave").focus(), 50);
+}
+async function entrarClave(ev) {
+  ev.preventDefault(); const m = document.getElementById("loginMsg"); m.textContent = "Conectando… (si el bot dormía, puede tardar 1 min)";
+  try {
+    const r = await _fetch(API + "/api/login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({clave: document.getElementById("loginClave").value})});
+    const d = await r.json();
+    if (d.token) { localStorage.setItem("sesion", d.token); location.reload(); } else m.textContent = d.error || "No pude entrar";
+  } catch (e) { m.textContent = "No pude conectar con el bot. Intenta de nuevo en un minuto."; }
+}
+addEventListener("DOMContentLoaded", async () => { await _canje; if (!_sesion) pedirClave(); });
 </script>
 
 <style>
