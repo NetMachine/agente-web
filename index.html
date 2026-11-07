@@ -338,7 +338,6 @@ pre{white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,"SF Mo
  <button data-t="control"><span data-ic="sliders"></span>Control</button>
  <button data-t="consola"><span data-ic="term"></span>Consola</button>
  <button data-t="mas"><span data-ic="grid"></span>Más</button>
- <button data-t="chat"><span data-ic="chat"></span>Chat</button>
 </nav>
 <div class="velo" id="velo" onclick="hoja(false)"></div>
 <div class="hoja" id="hoja">
@@ -347,6 +346,7 @@ pre{white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,"SF Mo
  <button onclick="ir('memoria')"><span class="ic" data-ic="db"></span><span>Memoria<small>Todo lo guardado, por sección</small></span></button>
  <button onclick="ir('pantalla')"><span class="ic" data-ic="monitor"></span><span>Pantalla<small>El navegador del bot en vivo</small></span></button>
  <button onclick="ir('archivos')"><span class="ic" data-ic="folder"></span><span>Archivos<small>Explorador del servidor, solo lectura</small></span></button>
+ <button onclick="ir('chat')"><span class="ic" data-ic="chat"></span><span>Chat<small>Háblale al bot desde aquí</small></span></button>
 </div>
 <div id="toast"><span id="toastIc"></span><span id="toastTx"></span></div>
 
@@ -422,7 +422,7 @@ function barra(id, pct, cls) { $(id).style.width = Math.max(0, Math.min(100, pct
 
 // ---------- Navegación ----------
 const NOMBRES = {resumen: "Resumen", chat: "Chat", trabajos: "Trabajos", control: "Control", consola: "Consola", mente: "Mente", memoria: "Memoria", pantalla: "Pantalla", archivos: "Archivos"};
-const EN_MAS = ["mente", "memoria", "pantalla", "archivos"];
+const EN_MAS = ["mente", "memoria", "pantalla", "archivos", "chat"];
 function hoja(on) { $("hoja").classList.toggle("on", on); $("velo").classList.toggle("on", on); }
 function ir(t) {
   hoja(false); tab = t; $("titulo").textContent = NOMBRES[t] || t;
